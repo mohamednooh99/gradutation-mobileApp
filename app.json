@@ -12,8 +12,11 @@
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
+    "locale": "ar",
+    "scheme": "myapp",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.myapp"
     },
     "android": {
       "adaptiveIcon": {
@@ -24,6 +27,22 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "plugins": [
+      "expo-font",
+      [
+        "@react-native-google-signin/google-signin",
+        {
+          "iosUrlScheme": "com.googleusercontent.apps.307019273872-de2ckv9lingcjukdlqac1pj450t3r5sh"
+        }
+      ],
+      [
+        "@react-native-firebase/app",
+        {
+          "iosGoogleServicesFile": "./GoogleService-Info.plist"
+        }
+      ],
+      "expo-web-browser"
+    ]
   }
 }

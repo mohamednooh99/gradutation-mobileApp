@@ -1,14 +1,17 @@
 import React from "react";
-import { ScrollView, StyleSheet } from "react-native";
+import {
+  ScrollView,
+  StyleSheet,
+} from "react-native";
 
-import HeroSection from "./HeroSection";
-import FeaturesSection from "./FeaturesSection";
-import HowItWorksSection from "./HowItWorksSection";
-import DepartmentsSection from "./DepartmentsSection";
-import AboutSection from "./AboutSection";
-import FAQSection from "./FAQSection";
-import CTASection from "./CTASection";
-import PrivacySection from "./PrivacySection";
+// Import separate components
+import HeroSection from './HeroSection';
+import FeaturesSection from './FeaturesSection';
+import HowItWorksSection from './HowItWorksSection';
+import DepartmentsSection from './DepartmentsSection';
+import AboutSection from './AboutSection';
+import FAQSection from './FAQSection';
+import CTASection from './CTASection';
 
 const LandingScreen = ({ navigation }) => {
   return (
@@ -16,7 +19,6 @@ const LandingScreen = ({ navigation }) => {
       <HeroSection navigation={navigation} />
       <FeaturesSection />
       <HowItWorksSection />
-      <PrivacySection />
       <DepartmentsSection />
       <AboutSection />
       <FAQSection />

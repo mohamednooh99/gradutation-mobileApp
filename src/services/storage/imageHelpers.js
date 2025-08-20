@@ -18,15 +18,25 @@ async function testFirebaseStorage() {
 
 async function compressImage(uri) {
   try {
-    // resize and compress to keep under a few hundred KB
-    const result = await ImageManipulator.manipulateAsync(
-      uri,
-      [{ resize: { width: 1280 } }],
-      { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
-    );
-    return result.uri;
+    console.log("Compressing image:", uri);
+    
+    // Check if ImageManipulator is available (mobile platforms)
+    if (ImageManipulator && ImageManipulator.manipulateAsync) {
+      // resize and compress to keep under a few hundred KB
+      const result = await ImageManipulator.manipulateAsync(
+        uri,
+        [{ resize: { width: 1280 } }],
+        { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
+      );
+      console.log("Image compressed successfully:", result.uri);
+      return result.uri;
+    } else {
+      console.log("ImageManipulator not available, using original URI");
+      return uri; // Return original URI on web or if ImageManipulator fails
+    }
   } catch (error) {
     console.error("Error compressing image:", error);
+    console.log("Falling back to original URI");
     return uri; // Return original URI if compression fails
   }
 }
@@ -78,6 +88,7 @@ async function uploadWithXHR(uri, storageRef) {
 async function uploadImageAndGetUrl(localUri, complaintId) {
   try {
     console.log("Starting image upload process...");
+    console.log("Local URI:", localUri);
 
     // Test Firebase Storage connectivity first
     const isAccessible = await testFirebaseStorage();
@@ -86,7 +97,7 @@ async function uploadImageAndGetUrl(localUri, complaintId) {
     }
 
     const compressedUri = await compressImage(localUri);
-    console.log("Image compressed, fetching blob...");
+    console.log("Image compressed, new URI:", compressedUri);
 
     const response = await fetch(compressedUri);
     if (!response.ok) {
@@ -94,9 +105,18 @@ async function uploadImageAndGetUrl(localUri, complaintId) {
     }
 
     const blob = await response.blob();
-    console.log("Blob created, size:", blob.size);
+    console.log("Blob created, size:", blob.size, "type:", blob.type);
 
-    const storageRef = ref(storage, `complaints/${complaintId}.jpg`);
+    // Validate blob
+    if (blob.size === 0) {
+      throw new Error("Image file is empty or corrupted");
+    }
+
+    if (blob.size > 5 * 1024 * 1024) { // 5MB limit
+      throw new Error("Image file is too large (max 5MB)");
+    }
+
+    const storageRef = ref(storage, `complaints/${complaintId}_${Date.now()}.jpg`);
     console.log("Storage reference created, uploading...");
 
     const uploadResult = await uploadBytes(storageRef, blob, {
@@ -109,13 +129,14 @@ async function uploadImageAndGetUrl(localUri, complaintId) {
     return downloadURL;
   } catch (error) {
     console.error("Error uploading image:", error);
+    console.error("Error details:", error.code, error.message);
 
     // Check if it's a CORS error
     if (error.message.includes("CORS") || error.message.includes("preflight")) {
       console.log("CORS error detected, trying alternative method...");
       try {
-        // Try alternative upload method
-        const storageRef = ref(storage, `complaints/${complaintId}.jpg`);
+        const compressedUri = await compressImage(localUri);
+        const storageRef = ref(storage, `complaints/${complaintId}_${Date.now()}.jpg`);
         await uploadWithXHR(compressedUri, storageRef);
         const downloadURL = await getDownloadURL(storageRef);
         console.log("Alternative upload successful:", downloadURL);
@@ -126,6 +147,19 @@ async function uploadImageAndGetUrl(localUri, complaintId) {
           "مشكلة في إعدادات Firebase Storage. يرجى التحقق من إعدادات CORS."
         );
       }
+    }
+
+    // Handle specific Firebase errors
+    if (error.code === 'storage/unauthorized') {
+      throw new Error("غير مصرح برفع الملفات. يرجى التحقق من صلاحيات Firebase Storage.");
+    }
+    
+    if (error.code === 'storage/canceled') {
+      throw new Error("تم إلغاء رفع الصورة.");
+    }
+    
+    if (error.code === 'storage/unknown') {
+      throw new Error("حدث خطأ غير معروف أثناء رفع الصورة.");
     }
 
     throw new Error(`فشل في رفع الصورة: ${error.message}`);
